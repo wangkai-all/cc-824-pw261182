@@ -1,0 +1,15 @@
+{
+  "name": "pooling-strategy",
+  "version": "1.0.0",
+  "description": "混池检测策略分析系统：相关风险、池大小依赖的检测性能、样量约束下的分池/拆检决策",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "test": "node --test tests/",
+    "serve": "node tools/serve.mjs",
+    "demo": "node tests/run-demo.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

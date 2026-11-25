@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>混池策略分析系统 · 合成演练台（虚构数据）</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body data-theme="light">
+    <a class="skip-link" href="#board">跳到分池演练台</a>
+    <header class="topbar">
+      <div class="brand">
+        <h1>混池策略分析系统</h1>
+        <p class="subtitle">相关风险 · 池大小依赖检测性能 · 台账一致的两目标决策 <span class="tag">全部数据为虚构</span></p>
+      </div>
+      <div class="top-actions">
+        <button id="resetBtn" class="btn btn-ghost" type="button">重置演练</button>
+        <button id="themeBtn" class="btn btn-ghost" type="button" aria-pressed="false">切换深色</button>
+      </div>
+    </header>
+
+    <div class="disclaimer" role="note">
+      <strong>边界声明：</strong>本系统用于方法演练，所有样品、风险与检测参数均为虚构。任何方案都
+      <strong>不宣称保证发现全部异常样品</strong>；风险假设缺乏证据时，请以敏感性区间而非单点结论为准。策略只依据台账中
+      <em>已得到的池结果</em>分支，不读取虚构真值。
+    </div>
+
+    <nav class="tabs" aria-label="功能区">
+      <button class="tab active" data-tab="workbench" type="button">① 分池演练台</button>
+      <button class="tab" data-tab="posterior" type="button">② 后验与检测性能</button>
+      <button class="tab" data-tab="evaluate" type="button">③ 冻结方案 · 整批评估</button>
+      <button class="tab" data-tab="ledger" type="button">④ 检测台账</button>
+    </nav>
+
+    <main>
+      <!-- ============ ① 演练台 ============ -->
+      <section id="tab-workbench" class="tab-panel active">
+        <div class="grid two-col">
+          <div class="card">
+            <h2>样品池（拖动或点击分池）</h2>
+            <p class="hint">
+              拖到目标池即可分池；也可点选样品再点目标池。池大小受实验容量
+              <code id="capHint"></code> 限制，剩余样量不足一次等分样的样品不可再入池。
+            </p>
+            <div class="board-controls">
+              <button id="applyRecBtn" class="btn" type="button">采用推荐分池</button>
+              <button id="clearBoardBtn" class="btn btn-ghost" type="button">清空分池</button>
+              <span id="boardMsg" class="board-msg" role="status"></span>
+            </div>
+            <div id="unassigned" class="pool unassigned" data-pool="unassigned" aria-label="未分池样品"></div>
+            <div id="pools" class="pools-wrap"></div>
+          </div>
+
+          <div class="card">
+            <h2>下一步与剩余样品</h2>
+            <div id="recoPanel" class="reco-panel"></div>
+            <h3 class="mt">执行一轮合成检测</h3>
+            <div class="exec-controls">
+              <label class="check">
+                <input type="checkbox" id="contamChk" />
+                本轮发生实验台污染（特异性下降）
+              </label>
+              <button id="runRoundBtn" class="btn btn-primary" type="button">执行本轮检测</button>
+            </div>
+            <p class="hint">结果由检测模型按池中是否含（虚构）真值阳性抽样；检测后从每个成员账上扣除等分样。</p>
+            <div id="volumePanel" class="volume-panel"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ ② 后验与性能 ============ -->
+      <section id="tab-posterior" class="tab-panel">
+        <div class="card">
+          <h2>样品阳性后验概率（台账贝叶斯更新）</h2>
+          <p class="hint" id="postMethodHint"></p>
+          <div id="posteriorChart" class="chart"></div>
+          <div class="table-toggle">
+            <button class="btn btn-ghost btn-sm" data-table="posteriorTable" type="button">查看数据表</button>
+          </div>
+          <div id="posteriorTable" class="data-table" hidden></div>
+        </div>
+        <div class="grid two-col">
+          <div class="card">
+            <h2>检测性能随池大小变化</h2>
+            <div id="perfChart" class="chart"></div>
+            <div class="table-toggle">
+              <button class="btn btn-ghost btn-sm" data-table="perfTable" type="button">查看数据表</button>
+            </div>
+            <div id="perfTable" class="data-table" hidden></div>
+          </div>
+          <div class="card">
+            <h2>潜在相关事件后验</h2>
+            <div id="eventChart" class="chart"></div>
+            <div class="table-toggle">
+              <button class="btn btn-ghost btn-sm" data-table="eventTable" type="button">查看数据表</button>
+            </div>
+            <div id="eventTable" class="data-table" hidden></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ ③ 整批评估 ============ -->
+      <section id="tab-evaluate" class="tab-panel">
+        <div class="card">
+          <h2>冻结方案并评估完整批次</h2>
+          <p class="hint">
+            冻结后，系统按当前风险/检测参数对大量虚构批次做蒙特卡洛重演，对比
+            <strong>费用最小</strong>与<strong>漏检受限</strong>两类目标。重演在独立台账上进行，不影响左侧演练台。
+          </p>
+          <div class="eval-controls">
+            <label>蒙特卡洛重复次数
+              <input type="number" id="replicationsInput" min="40" max="2000" step="20" />
+            </label>
+            <label>污染概率
+              <input type="number" id="contamInput" min="0" max="1" step="0.01" />
+            </label>
+            <label>漏检约束（期望漏检数/批）
+              <input type="number" id="missBoundInput" min="0.01" max="2" step="0.01" />
+            </label>
+            <button id="freezeBtn" class="btn btn-primary" type="button">冻结并评估完整批次</button>
+          </div>
+          <div id="evalProgress" class="eval-progress" hidden></div>
+          <div id="evalSummary" class="eval-summary"></div>
+          <div id="evalChart" class="chart tall"></div>
+          <div class="table-toggle">
+            <button class="btn btn-ghost btn-sm" data-table="evalTable" type="button">查看数据表</button>
+          </div>
+          <div id="evalTable" class="data-table" hidden></div>
+        </div>
+
+        <div class="grid two-col">
+          <div class="card">
+            <h2>小样本枚举核对最优路径（N=4）</h2>
+            <p class="hint">在 2^(N+K) 联合状态上做约束动态规划，核对贪婪推荐的方向；仅 N≤6 可精确枚举。</p>
+            <div id="dpPanel"></div>
+          </div>
+          <div class="card">
+            <h2>敏感性区间（风险假设缺乏证据时）</h2>
+            <p class="hint">对风险与事件概率做 0.5×/1×/2× 情景，观察结论稳健性。</p>
+            <button id="sensBtn" class="btn" type="button">运行 9 情景敏感性分析</button>
+            <div id="sensPanel"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ ④ 台账 ============ -->
+      <section id="tab-ledger" class="tab-panel">
+        <div class="card">
+          <h2>检测台账（只追加 · 唯一事实来源）</h2>
+          <p class="hint">更正不抹除原始记录，而是追加 CORRECTION 事件；分析侧状态全部由本台账派生。</p>
+          <div id="ledgerMeta" class="ledger-meta"></div>
+          <div id="ledgerTable" class="data-table"></div>
+        </div>
+      </section>
+    </main>
+
+    <div id="tooltip" class="tooltip" hidden></div>
+    <footer class="footer">
+      <span>纯 ESM · 零运行时依赖 · 可复现随机种子</span>
+      <span id="seedLabel"></span>
+    </footer>
+
+    <script type="module" src="./app.mjs"></script>
+  </body>
+</html>
